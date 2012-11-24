@@ -2,6 +2,7 @@
 package gst
 
 /*
+#include <stdlib.h>
 #include <gst/gst.h>
 
 char** _gst_init(int* argc, char** argv) {
@@ -34,7 +35,7 @@ Fields _parse_struct(GstStructure *s) {
 	return f;	
 }
 
-#cgo pkg-config: gstreamer-0.10 gstreamer-interfaces-0.10
+#cgo pkg-config: gstreamer-1.0
 */
 import "C"
 
@@ -42,7 +43,7 @@ import (
 	"os"
 	"unsafe"
 	"fmt"
-	"github.com/ziutek/glib"
+	"github.com/ginuerzh/glib"
 )
 
 func v2g(v *glib.Value) *C.GValue {
@@ -55,15 +56,19 @@ func g2v(v *C.GValue) *glib.Value {
 
 type Fourcc C.guint32
 
+/*
 func (f Fourcc) Type() glib.Type {
 	return TYPE_FOURCC
 }
+*/
 
+/*
 func (f Fourcc) Value() *glib.Value {
 	v := glib.NewValue(f.Type())
 	C.gst_value_set_fourcc(v2g(v), C.guint32(f))
 	return v
 }
+*/
 
 func (f Fourcc) String() string {
 	buf := make([]byte, 4)
@@ -85,9 +90,11 @@ func StrFourcc(s string) Fourcc {
 	return MakeFourcc(s[0], s[1], s[2], s[3])
 }
 
+/*
 func ValueFourcc(v *glib.Value) Fourcc {
 	return Fourcc(C.gst_value_get_fourcc(v2g(v)))
 }
+*/
 
 type IntRange struct {
 	Start, End int
@@ -139,7 +146,8 @@ func ValueFraction(v *glib.Value) *Fraction {
 	}
 }
 
-var TYPE_FOURCC, TYPE_INT_RANGE, TYPE_FRACTION glib.Type
+//var TYPE_FOURCC, 
+var TYPE_INT_RANGE, TYPE_FRACTION glib.Type
 
 
 func init() {
@@ -155,7 +163,7 @@ func init() {
 		os.Args[i] = C.GoString(s)
 	}
 
-	TYPE_FOURCC = glib.Type(C.gst_fourcc_get_type())
+	//TYPE_FOURCC = glib.Type(C.gst_fourcc_get_type())
 	TYPE_INT_RANGE = glib.Type(C.gst_int_range_get_type())
 	TYPE_FRACTION = glib.Type(C.gst_fraction_get_type())
 }
@@ -163,7 +171,7 @@ func init() {
 
 func makeGstStructure(name string, fields glib.Params) *C.GstStructure {
 	nm := (*C.gchar)(C.CString(name))
-	s := C.gst_structure_empty_new(nm)
+	s := C.gst_structure_new_empty(nm)
 	C.free(unsafe.Pointer(nm))
 	for k, v := range fields {
 		n := (*C.gchar)(C.CString(k))

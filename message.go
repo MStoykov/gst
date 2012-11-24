@@ -1,13 +1,14 @@
 package gst
 
 /*
+#include <stdlib.h>
 #include <gst/gst.h>
 */
 import "C"
 
 import (
 	"unsafe"
-	"github.com/ziutek/glib"
+	"github.com/ginuerzh/glib"
 )
 
 type MessageType C.GstMessageType
@@ -128,10 +129,11 @@ func (m *Message) GetType() MessageType {
 }
 
 func (m *Message) GetStructure() (string, glib.Params) {
-	if m.structure == nil {
+	structure := C.gst_message_get_structure(m.g())
+	if structure == nil {
 		return "", nil
 	}
-	return parseGstStructure(m.structure)
+	return parseGstStructure(structure)
 }
 
 func (m *Message) GetSrc() *GstObj {

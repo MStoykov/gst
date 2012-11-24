@@ -8,7 +8,8 @@ import "C"
 
 import (
 	"unsafe"
-	"github.com/ziutek/glib"
+	"time"
+	"github.com/ginuerzh/glib"
 )
 
 type State C.GstState
@@ -48,6 +49,17 @@ const (
 	STATE_CHANGE_SUCCESS    = StateChangeReturn(C.GST_STATE_CHANGE_SUCCESS)
 	STATE_CHANGE_ASYNC      = StateChangeReturn(C.GST_STATE_CHANGE_ASYNC)
 	STATE_CHANGE_NO_PREROLL = StateChangeReturn(C.GST_STATE_CHANGE_NO_PREROLL)
+)
+
+type Format C.GstFormat
+
+const (
+	FORMAT_UNDEFINED  = Format(C.GST_FORMAT_UNDEFINED)
+	FORMAT_DEFAULT = Format(C.GST_FORMAT_DEFAULT)
+	FORMAT_BYTES = Format(C.GST_FORMAT_BYTES)
+	FORMAT_TIME = Format(C.GST_FORMAT_TIME)
+	FORMAT_BUFFERS = Format(C.GST_FORMAT_BUFFERS)
+	FORMAT_PERCENT = Format(C.GST_FORMAT_PERCENT)
 )
 
 type Element struct {
@@ -119,7 +131,7 @@ func (e *Element) AddPad(p *Pad) bool {
 func (e *Element) GetPad(name string) *Pad {
 	s := (*C.gchar)(C.CString(name))
 	defer C.free(unsafe.Pointer(s))
-	cp := C.gst_element_get_pad(e.g(), s)
+	cp := C.gst_element_get_static_pad(e.g(), s)
 	if cp == nil {
 		return nil
 	}
@@ -150,6 +162,10 @@ func (e *Element) GetBus() *Bus {
 	return b
 }
 
+func (e *Element) QueryPosition(format Format, cur *time.Duration) bool {
+	return C.gst_element_query_position(e.g(), C.GstFormat(format), (*C.gint64)(cur)) != 0
+}
+
 // TODO: Move ElementFactoryMake to element_factory.go
 func ElementFactoryMake(factory_name, name string) *Element {
 	fn := (*C.gchar)(C.CString(factory_name))
@@ -160,3 +176,4 @@ func ElementFactoryMake(factory_name, name string) *Element {
 	e.SetPtr(glib.Pointer(C.gst_element_factory_make(fn, n)))
 	return e
 }
+

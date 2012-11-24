@@ -1,13 +1,14 @@
 package gst
 
 /*
+#include <stdlib.h>
 #include <gst/gst.h>
 */
 import "C"
 
 import (
 	"unsafe"
-	"github.com/ziutek/glib"
+	"github.com/ginuerzh/glib"
 )
 
 type PadLinkReturn C.GstPadLinkReturn

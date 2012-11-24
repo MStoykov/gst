@@ -8,7 +8,7 @@ import "C"
 
 import (
 	"unsafe"
-	"github.com/ziutek/glib"
+	"github.com/ginuerzh/glib"
 )
 
 type Bin struct {

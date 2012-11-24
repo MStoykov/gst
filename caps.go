@@ -1,13 +1,18 @@
 package gst
 
 /*
+#include <stdlib.h>
 #include <gst/gst.h>
+
+int _gst_caps_refcount_value(GstCaps *caps) {
+	return GST_CAPS_REFCOUNT_VALUE(caps);
+}
 */
 import "C"
 
 import (
 	"unsafe"
-	"github.com/ziutek/glib"
+	"github.com/ginuerzh/glib"
 )
 
 type Caps C.GstCaps
@@ -25,7 +30,7 @@ func (c *Caps) Unref() {
 }
 
 func (c *Caps) RefCount() int {
-	return int(c.refcount)
+	return int(C._gst_caps_refcount_value(c.g()))
 }
 
 func (c *Caps) AppendStructure(media_type string, fields glib.Params) {
