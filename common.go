@@ -35,7 +35,8 @@ Fields _parse_struct(GstStructure *s) {
 	return f;	
 }
 
-#cgo pkg-config: gstreamer-1.0
+#cgo pkg-config: gstreamer-0.10
+//#cgo pkg-config: gstreamer-1.0
 */
 import "C"
 
@@ -171,7 +172,8 @@ func init() {
 
 func makeGstStructure(name string, fields glib.Params) *C.GstStructure {
 	nm := (*C.gchar)(C.CString(name))
-	s := C.gst_structure_new_empty(nm)
+	s := C.gst_structure_empty_new(nm)
+	//s := C.gst_structure_new_empty(nm)
 	C.free(unsafe.Pointer(nm))
 	for k, v := range fields {
 		n := (*C.gchar)(C.CString(k))
