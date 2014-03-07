@@ -162,7 +162,7 @@ func (e *Element) GetBus() *Bus {
 }
 
 func (e *Element) QueryPosition(format Format, cur *time.Duration) bool {
-	return C.gst_element_query_position(e.g(), (*C.GstFormat)(&format), (*C.gint64)(cur)) != 0
+	return C.gst_element_query_position(e.g(), (C.GstFormat)(format), (*C.gint64)(cur)) != 0
 }
 
 // TODO: Move ElementFactoryMake to element_factory.go

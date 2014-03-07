@@ -35,8 +35,7 @@ Fields _parse_struct(GstStructure *s) {
 	return f;
 }
 
-#cgo pkg-config: gstreamer-0.10
-//#cgo pkg-config: gstreamer-1.0
+#cgo pkg-config: gstreamer-1.0
 */
 import "C"
 
@@ -170,8 +169,7 @@ func init() {
 
 func makeGstStructure(name string, fields glib.Params) *C.GstStructure {
 	nm := (*C.gchar)(C.CString(name))
-	s := C.gst_structure_empty_new(nm)
-	//s := C.gst_structure_new_empty(nm)
+	s := C.gst_structure_new_empty(nm)
 	C.free(unsafe.Pointer(nm))
 	for k, v := range fields {
 		n := (*C.gchar)(C.CString(k))
@@ -194,3 +192,17 @@ func parseGstStructure(s *C.GstStructure) (name string, fields glib.Params) {
 }
 
 var CLOCK_TIME_NONE = int64(C.GST_CLOCK_TIME_NONE)
+
+var GST_VERSION_MINOR = int64(C.GST_VERSION_MINOR)
+var GST_VERSION_MICRO = int64(C.GST_VERSION_MICRO)
+var GST_VERSION_NANO = int64(C.GST_VERSION_NANO)
+
+func Version() (int, int, int, int) {
+	var cmajor, cminor, cmicro, cnano C.guint
+	C.gst_version(&cmajor, &cminor, &cmicro, &cnano)
+	return int(cmajor), int(cminor), int(cmicro), int(cnano)
+}
+
+func VersionString() string {
+	return C.GoString((*C.char)(C.gst_version_string()))
+}
