@@ -7,9 +7,9 @@ package gst
 import "C"
 
 import (
-	"unsafe"
-	"time"
 	"github.com/ginuerzh/glib"
+	"time"
+	"unsafe"
 )
 
 type State C.GstState
@@ -54,12 +54,12 @@ const (
 type Format C.GstFormat
 
 const (
-	FORMAT_UNDEFINED  = Format(C.GST_FORMAT_UNDEFINED)
-	FORMAT_DEFAULT = Format(C.GST_FORMAT_DEFAULT)
-	FORMAT_BYTES = Format(C.GST_FORMAT_BYTES)
-	FORMAT_TIME = Format(C.GST_FORMAT_TIME)
-	FORMAT_BUFFERS = Format(C.GST_FORMAT_BUFFERS)
-	FORMAT_PERCENT = Format(C.GST_FORMAT_PERCENT)
+	FORMAT_UNDEFINED = Format(C.GST_FORMAT_UNDEFINED)
+	FORMAT_DEFAULT   = Format(C.GST_FORMAT_DEFAULT)
+	FORMAT_BYTES     = Format(C.GST_FORMAT_BYTES)
+	FORMAT_TIME      = Format(C.GST_FORMAT_TIME)
+	FORMAT_BUFFERS   = Format(C.GST_FORMAT_BUFFERS)
+	FORMAT_PERCENT   = Format(C.GST_FORMAT_PERCENT)
 )
 
 type Element struct {
@@ -115,14 +115,13 @@ func (e *Element) SetState(state State) StateChangeReturn {
 	return StateChangeReturn(C.gst_element_set_state(e.g(), C.GstState(state)))
 }
 
-func (e *Element)  GetState(timeout_ns int64) (state, pending State,
-		ret StateChangeReturn) {
+func (e *Element) GetState(timeout_ns int64) (state, pending State,
+	ret StateChangeReturn) {
 	ret = StateChangeReturn(C.gst_element_get_state(
 		e.g(), state.g(), pending.g(), C.GstClockTime(timeout_ns),
 	))
 	return
 }
-
 
 func (e *Element) AddPad(p *Pad) bool {
 	return C.gst_element_add_pad(e.g(), p.g()) != 0
@@ -176,4 +175,3 @@ func ElementFactoryMake(factory_name, name string) *Element {
 	e.SetPtr(glib.Pointer(C.gst_element_factory_make(fn, n)))
 	return e
 }
-

@@ -7,8 +7,8 @@ package gst
 import "C"
 
 import (
-	"unsafe"
 	"github.com/ginuerzh/glib"
+	"unsafe"
 )
 
 type Bin struct {
