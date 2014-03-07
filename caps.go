@@ -11,7 +11,7 @@ int _gst_caps_refcount_value(GstCaps *caps) {
 import "C"
 
 import (
-	"github.com/ginuerzh/glib"
+	"github.com/tobert/glib"
 	"unsafe"
 )
 

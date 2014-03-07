@@ -42,7 +42,7 @@ import "C"
 
 import (
 	"fmt"
-	"github.com/ginuerzh/glib"
+	"github.com/tobert/glib"
 	"os"
 	"unsafe"
 )
