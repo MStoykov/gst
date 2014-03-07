@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"github.com/ginuerzh/glib"
 	"github.com/ginuerzh/gst"
-	"fmt"
 )
 
 func main() {
