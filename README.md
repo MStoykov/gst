@@ -21,6 +21,9 @@ for video because of small bitrate of this stream and big buffer in you browser.
 
 ### Upstream
 
-This is a fork. To get the original:
+This is a fork. I added a couple examples, some trivial functions, and tweaked
+things to link against Gstreamer 1.2.
+
+To get the original:
 
     $ go get github.com/ziutek/gst
