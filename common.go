@@ -41,7 +41,7 @@ import "C"
 
 import (
 	"fmt"
-	"github.com/tobert/glib"
+	"github.com/ziutek/glib"
 	"os"
 	"unsafe"
 )

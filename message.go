@@ -7,7 +7,7 @@ package gst
 import "C"
 
 import (
-	"github.com/tobert/glib"
+	"github.com/ziutek/glib"
 	"unsafe"
 )
 
