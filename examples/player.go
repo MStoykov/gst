@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/ziutek/gst"
+	"github.com/MStoykov/gst"
 	"github.com/ziutek/gtk"
 )
 
@@ -50,14 +50,14 @@ func (p *Player) onMessage(bus *gst.Bus, msg *gst.Message) {
 
 func (p *Player) onSyncMessage(bus *gst.Bus, msg *gst.Message) {
 	name, _ := msg.GetStructure()
-	if name != "prepare-xwindow-id" {
+	if name != "prepare-window-handle" {
 		return
 	}
 	img_sink := msg.GetSrc()
-	xov := gst.XOverlayCast(img_sink)
+	xov := gst.VideoOverlayCast(img_sink)
 	if p.xid != 0 && xov != nil {
 		img_sink.SetProperty("force-aspect-ratio", true)
-		xov.SetXwindowId(p.xid)
+		xov.SetVideoWindowHandle(p.xid)
 	} else {
 		fmt.Println("Error: xid =", p.xid, "xov =", xov)
 	}
@@ -107,7 +107,7 @@ func NewPlayer() *Player {
 	p.window.ShowAll()
 	p.window.Realize()
 
-	p.pipe = gst.ElementFactoryMake("playbin2", "autoplay")
+	p.pipe = gst.ElementFactoryMake("playbin", "autoplay")
 	p.bus = p.pipe.GetBus()
 	p.bus.AddSignalWatch()
 	p.bus.Connect("message", (*Player).onMessage, p)
