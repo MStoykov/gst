@@ -9,7 +9,6 @@ import "C"
 import (
 	"github.com/conformal/gotk3/glib"
 	"runtime"
-	"time"
 	"unsafe"
 )
 
@@ -50,6 +49,20 @@ const (
 	STATE_CHANGE_SUCCESS    = StateChangeReturn(C.GST_STATE_CHANGE_SUCCESS)
 	STATE_CHANGE_ASYNC      = StateChangeReturn(C.GST_STATE_CHANGE_ASYNC)
 	STATE_CHANGE_NO_PREROLL = StateChangeReturn(C.GST_STATE_CHANGE_NO_PREROLL)
+)
+
+type SeekFlags C.GstSeekFlags
+
+const (
+	SEEK_FLAG_NONE         SeekFlags = C.GST_SEEK_FLAG_NONE
+	SEEK_FLAG_FLUSH        SeekFlags = C.GST_SEEK_FLAG_FLUSH
+	SEEK_FLAG_ACCURATE     SeekFlags = C.GST_SEEK_FLAG_ACCURATE
+	SEEK_FLAG_KEY_UNIT     SeekFlags = C.GST_SEEK_FLAG_KEY_UNIT
+	SEEK_FLAG_SEGMENT      SeekFlags = C.GST_SEEK_FLAG_SEGMENT
+	SEEK_FLAG_SKIP         SeekFlags = C.GST_SEEK_FLAG_SKIP
+	SEEK_FLAG_SNAP_BEFORE  SeekFlags = C.GST_SEEK_FLAG_SNAP_BEFORE
+	SEEK_FLAG_SNAP_AFTER   SeekFlags = C.GST_SEEK_FLAG_SNAP_AFTER
+	SEEK_FLAG_SNAP_NEAREST SeekFlags = C.GST_SEEK_FLAG_SNAP_NEAREST
 )
 
 type Format C.GstFormat
@@ -140,19 +153,6 @@ func (e *Element) GetPad(name string) (*Pad, error) {
 	obj.RefSink()
 	runtime.SetFinalizer(obj, (*glib.Object).Unref)
 	return l, nil
-
-	////////////////////////////////////////////*
-	/*
-		s := (*C.gchar)(C.CString(name))
-		defer C.free(unsafe.Pointer(s))
-		cp := C.gst_element_get_static_pad(e.g(), s)
-		if cp == nil {
-			return nil
-		}
-		p := new(Pad)
-		p.SetPtr(glib.Pointer(cp))
-		return p
-	*/
 }
 
 func (e *Element) GetStaticPad(name string) (*Pad, error) {
@@ -167,17 +167,6 @@ func (e *Element) GetStaticPad(name string) (*Pad, error) {
 	obj.RefSink()
 	runtime.SetFinalizer(obj, (*glib.Object).Unref)
 	return l, nil
-	/*
-		s := (*C.gchar)(C.CString(name))
-		defer C.free(unsafe.Pointer(s))
-		cp := C.gst_element_get_static_pad(e.g(), s)
-		if cp == nil {
-			return nil
-		}
-		p := new(Pad)
-		p.SetPtr(glib.Pointer(cp))
-		return p
-	*/
 }
 
 func (e *Element) GetBus() *Bus {
@@ -190,20 +179,14 @@ func (e *Element) GetBus() *Bus {
 	obj.RefSink()
 	runtime.SetFinalizer(obj, (*glib.Object).Unref)
 	return l
-	/*
-
-		bus := C.gst_element_get_bus(e.g())
-		if bus == nil {
-			return nil
-		}
-		b := new(Bus)
-		b.SetPtr(glib.Pointer(bus))
-		return b
-	*/
 }
 
-func (e *Element) QueryPosition(format Format, cur *time.Duration) bool {
+func (e *Element) QueryPosition(format Format, cur *int64) bool {
 	return C.gst_element_query_position(e.g(), (C.GstFormat)(format), (*C.gint64)(cur)) != 0
+}
+
+func (e *Element) SeekSimple(format Format, flags SeekFlags, seek_pos int64) bool {
+	return C.gst_element_seek_simple(e.g(), (C.GstFormat)(format), (C.GstSeekFlags)(flags), (C.gint64)(seek_pos)) != 0
 }
 
 func wrapElement(obj *glib.Object) *Element {

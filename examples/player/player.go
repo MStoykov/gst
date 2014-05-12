@@ -1,12 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"time"
+
 	"github.com/MStoykov/gdk_x11"
 	"github.com/MStoykov/gst"
+	"github.com/conformal/gotk3/gdk"
 	"github.com/conformal/gotk3/gtk"
-	"github.com/davecgh/go-spew/spew"
-	"log"
 )
 
 type FileChooserWindow struct {
@@ -41,30 +42,16 @@ type Player struct {
 }
 
 func (p *Player) onPlayClicked(b *gtk.Button) {
-	log.Println("play-clicked")
-	log.Println("file", p.file_path)
 	if p.file_path != "" {
-		spew.Dump(p.pipe)
 		err := p.pipe.SetProperty("uri", "file://"+p.file_path)
 		if err != nil {
 			panic(err)
 		}
-		prop, err := p.pipe.GetProperty("uri")
-		log.Printf("prop: %s, err :%s", prop, err)
 		p.pipe.SetState(gst.STATE_PLAYING)
-
-		prop, err = p.pipe.GetProperty("current-uri")
-		log.Printf("prop: %s, err :%s", prop, err)
-		prop, err = p.pipe.GetProperty("current-urisds")
-		log.Printf("prop: %s, err :%s", prop, err)
-		spew.Dump(p.pipe)
 	}
-
-	log.Println("play-clicked-end")
 }
 
 func (p *Player) onPauseClicked(b *gtk.Button) {
-	log.Println("pause-clicked")
 	state, _, _ := p.pipe.GetState(gst.CLOCK_TIME_NONE)
 	if state == gst.STATE_PLAYING {
 		p.pipe.SetState(gst.STATE_PAUSED)
@@ -72,38 +59,26 @@ func (p *Player) onPauseClicked(b *gtk.Button) {
 }
 
 func (p *Player) onStopClicked(b *gtk.Button) {
-
-	log.Println("stop-clicked")
 	p.pipe.SetState(gst.STATE_NULL)
 }
 
 func (p *Player) onFileSelected(widget *gtk.FileChooserWidget) {
 	p.file_path = widget.FileChooser.GetFilename()
-	log.Println("file-selected", p.file_path)
 }
 
 func (p *Player) onMessage(bus *gst.Bus, msg *gst.Message) {
-	//name, err := msg.GetStructure()
-	//log.Printf("name: %s ,  err  %s\n", name, err)
 	switch msg.GetType() {
 	case gst.MESSAGE_EOS:
 		p.pipe.SetState(gst.STATE_NULL)
 	case gst.MESSAGE_ERROR:
 		p.pipe.SetState(gst.STATE_NULL)
 		err, debug := msg.ParseError()
-		fmt.Printf("Error: %s (debug: %s)\n", err, debug)
+		log.Printf("Error: %s (debug: %s)\n", err, debug)
 	}
 }
 
 func (p *Player) onSyncMessage(bus *gst.Bus, msg *gst.Message) {
 	name, _ := msg.GetStructure()
-	/*
-		log.Println("!!!!!!!!!!!!!!OnSyncMessage")
-		log.Printf("name: %s\n", name)
-		for name, value := range str {
-			log.Printf("---> %s: %s", name, value)
-		}
-	*/
 	if name != "prepare-window-handle" {
 		return
 	}
@@ -113,18 +88,16 @@ func (p *Player) onSyncMessage(bus *gst.Bus, msg *gst.Message) {
 		img_sink.Set("force-aspect-ratio", true)
 		xov.SetVideoWindowHandle(p.xid)
 	} else {
-		fmt.Println("Error: xid =", p.xid, "xov =", xov)
+		log.Println("Error: xid =", p.xid, "xov =", xov)
 	}
 }
 
 func (p *Player) onVideoWidgetRealize(w *gtk.DrawingArea) {
-	fmt.Println("realized")
 	window, err := w.GetWindow()
 	if err != nil {
 		log.Fatal("Error on getting movie_area Window", err)
 	}
 	p.xid = gdk_x11.GetGDKX11WindowId(window)
-	fmt.Printf("window-id:%d ", p.xid)
 }
 
 func NewPlayer() *Player {
@@ -179,22 +152,72 @@ func NewPlayer() *Player {
 
 	p.movie_area, _ = gtk.DrawingAreaNew()
 	p.movie_area.Connect("realize", p.onVideoWidgetRealize)
-	//p.movie_area.SetDoubleBuffered(false)
+	p.movie_area.SetDoubleBuffered(false)
 	p.movie_area.SetSizeRequest(640, 360)
 	vbox.Add(p.movie_area)
 
 	p.window.ShowAll()
-	//p.window.Realize()
 	p.pipe = gst.ElementFactoryMake("playbin", "mine")
 	p.bus = p.pipe.GetBus()
 	p.bus.AddSignalWatch()
 
-	log.Printf("p.bus: %#v", p.bus)
 	p.bus.Connect("message", p.onMessage)
 	p.bus.EnableSyncMessageEmission()
 	p.bus.Connect("sync-message", p.onSyncMessage)
+	p.window.Connect("key-press-event", p.onKeyPress)
 
 	return p
+}
+
+func (p *Player) jumpBy(by int64) {
+	var d = new(int64)
+	b := p.pipe.QueryPosition(gst.FORMAT_TIME, d)
+	if b == false {
+		log.Printf("Couldn't get current position while trying to jump")
+		return
+	}
+	*d = *d + by
+	b = p.pipe.SeekSimple(gst.FORMAT_TIME, gst.SEEK_FLAG_FLUSH|gst.SEEK_FLAG_KEY_UNIT, *d)
+	if b == false {
+		log.Printf("Couldn't get change position while trying to jump")
+	}
+}
+
+func (p *Player) jumpForward() {
+	p.jumpBy(int64(time.Second))
+}
+
+func (p *Player) jumpBackward() {
+	p.jumpBy(-int64(time.Second))
+}
+
+func (p *Player) onKeyPress(w *gtk.Window, event *gdk.Event) bool {
+	if event.GetType() != gdk.GDK_KEY_PRESS {
+		panic("wrong type of event in onKeyPress handler")
+	}
+	eventKey := gdk.EventKeyFromEvent(event)
+	keyVal, err := eventKey.GetKeyVal()
+	if err != nil {
+		panic(err)
+	}
+	switch keyVal {
+	case gdk.GDK_KEY_Left:
+		log.Println("left")
+		p.jumpBackward()
+	case gdk.GDK_KEY_Right:
+		log.Println("right")
+		p.jumpForward()
+	case gdk.GDK_KEY_a:
+		log.Println("a")
+		var d = new(int64)
+		b := p.pipe.QueryPosition(gst.FORMAT_TIME, d)
+		if b == true {
+			log.Printf("current position: %s\n", b, time.Duration(*d))
+		}
+	}
+
+	log.Println("key pressed")
+	return false
 }
 
 type FileChooseButton struct {
@@ -220,5 +243,6 @@ func (p *Player) Run() {
 
 func main() {
 	gtk.Init(nil)
-	NewPlayer().Run()
+	player := NewPlayer()
+	player.Run()
 }
