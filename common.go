@@ -40,8 +40,9 @@ Fields _parse_struct(GstStructure *s) {
 import "C"
 
 import (
-	"fmt"
-	"github.com/ziutek/glib"
+	"errors"
+	_ "fmt"
+	"github.com/conformal/gotk3/glib"
 	"os"
 	"unsafe"
 )
@@ -56,19 +57,7 @@ func g2v(v *C.GValue) *glib.Value {
 
 type Fourcc C.guint32
 
-/*
-func (f Fourcc) Type() glib.Type {
-	return TYPE_FOURCC
-}
-*/
-
-/*
-func (f Fourcc) Value() *glib.Value {
-	v := glib.NewValue(f.Type())
-	C.gst_value_set_fourcc(v2g(v), C.guint32(f))
-	return v
-}
-*/
+var nilPtrErr = errors.New("cgo returned unexpected nil pointer")
 
 func (f Fourcc) String() string {
 	buf := make([]byte, 4)
@@ -89,66 +78,6 @@ func StrFourcc(s string) Fourcc {
 	}
 	return MakeFourcc(s[0], s[1], s[2], s[3])
 }
-
-/*
-func ValueFourcc(v *glib.Value) Fourcc {
-	return Fourcc(C.gst_value_get_fourcc(v2g(v)))
-}
-*/
-
-type IntRange struct {
-	Start, End int
-}
-
-func (r *IntRange) Type() glib.Type {
-	return TYPE_INT_RANGE
-}
-
-func (r *IntRange) Value() *glib.Value {
-	v := glib.NewValue(r.Type())
-	C.gst_value_set_int_range(v2g(v), C.gint(r.Start), C.gint(r.End))
-	return v
-}
-
-func (r *IntRange) String() string {
-	return fmt.Sprintf("[%d,%d]", r.Start, r.End)
-}
-
-func ValueRange(v *glib.Value) *IntRange {
-	return &IntRange{
-		int(C.gst_value_get_int_range_min(v2g(v))),
-		int(C.gst_value_get_int_range_max(v2g(v))),
-	}
-}
-
-type Fraction struct {
-	Numer, Denom int
-}
-
-func (f *Fraction) Type() glib.Type {
-	return TYPE_FRACTION
-}
-
-func (f *Fraction) Value() *glib.Value {
-	v := glib.NewValue(f.Type())
-	C.gst_value_set_fraction(v2g(v), C.gint(f.Numer), C.gint(f.Denom))
-	return v
-}
-
-func (r *Fraction) String() string {
-	return fmt.Sprintf("%d/%d", r.Numer, r.Denom)
-}
-
-func ValueFraction(v *glib.Value) *Fraction {
-	return &Fraction{
-		int(C.gst_value_get_fraction_numerator(v2g(v))),
-		int(C.gst_value_get_fraction_denominator(v2g(v))),
-	}
-}
-
-//var TYPE_FOURCC,
-var TYPE_INT_RANGE, TYPE_FRACTION glib.Type
-
 func init() {
 	alen := C.int(len(os.Args))
 	argv := make([]*C.char, alen)
@@ -161,32 +90,53 @@ func init() {
 	for i, s := range argv {
 		os.Args[i] = C.GoString(s)
 	}
+	tm := []glib.TypeMarshaler{
+		{glib.Type(C.gst_bus_get_type()), marshalBus},
+		{glib.Type(C.gst_message_get_type()), marshalMessage},
+	}
 
-	//TYPE_FOURCC = glib.Type(C.gst_fourcc_get_type())
-	TYPE_INT_RANGE = glib.Type(C.gst_int_range_get_type())
-	TYPE_FRACTION = glib.Type(C.gst_fraction_get_type())
+	glib.RegisterGValueMarshalers(tm)
 }
 
-func makeGstStructure(name string, fields glib.Params) *C.GstStructure {
+func marshalBus(p uintptr) (interface{}, error) {
+	c := C.g_value_get_object((*C.GValue)(unsafe.Pointer(p)))
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	return wrapBus(obj), nil
+}
+
+func marshalMessage(p uintptr) (interface{}, error) {
+	c := C.g_value_get_boxed((*C.GValue)(unsafe.Pointer(p)))
+	return (*Message)(unsafe.Pointer(c)), nil
+}
+
+func makeGstStructure(name string, fields map[string]interface{}) *C.GstStructure {
 	nm := (*C.gchar)(C.CString(name))
 	s := C.gst_structure_new_empty(nm)
 	C.free(unsafe.Pointer(nm))
 	for k, v := range fields {
 		n := (*C.gchar)(C.CString(k))
-		C.gst_structure_take_value(s, n, v2g(glib.ValueOf(v)))
+		value, err := glib.GValue(v)
+		if err != nil {
+			panic(err)
+		}
+		C.gst_structure_take_value(s, n, v2g(value))
 		C.free(unsafe.Pointer(n))
 	}
 	return s
 }
 
-func parseGstStructure(s *C.GstStructure) (name string, fields glib.Params) {
+func parseGstStructure(s *C.GstStructure) (name string, fields map[string]interface{}) {
 	name = C.GoString((*C.char)(C.gst_structure_get_name(s)))
 	ps := C._parse_struct(s)
 	n := (int)(ps.n)
 	tab := (*[1 << 16]C.Field)(unsafe.Pointer(ps.tab))[:n]
-	fields = make(glib.Params)
+	fields = make(map[string]interface{})
 	for _, f := range tab {
-		fields[C.GoString(f.name)] = g2v(f.val).Get()
+		value, err := g2v(f.val).GoValue()
+		if err != nil {
+			panic(err)
+		}
+		fields[C.GoString(f.name)] = value
 	}
 	return
 }

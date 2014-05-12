@@ -11,7 +11,7 @@ GstVideoOverlay* _gst_video_overlay_cast(GstObject* o) {
 import "C"
 
 import (
-	"github.com/ziutek/glib"
+	_ "github.com/conformal/gotk3/glib"
 )
 
 type VideoOverlay C.GstVideoOverlay
@@ -20,9 +20,11 @@ func (x *VideoOverlay) g() *C.GstVideoOverlay {
 	return (*C.GstVideoOverlay)(x)
 }
 
+/*
 func (x *VideoOverlay) Type() glib.Type {
 	return glib.TypeFromName("GstVideoOverlay")
 }
+*/
 
 func (x *VideoOverlay) SetVideoWindowHandle(id uint) {
 	C.gst_video_overlay_set_window_handle(x.g(), C.guintptr(id))

@@ -7,7 +7,8 @@ package gst
 import "C"
 
 import (
-	"github.com/ziutek/glib"
+	"github.com/conformal/gotk3/glib"
+	"runtime"
 	"time"
 	"unsafe"
 )
@@ -67,7 +68,7 @@ type Element struct {
 }
 
 func (e *Element) g() *C.GstElement {
-	return (*C.GstElement)(e.GetPtr())
+	return (*C.GstElement)(unsafe.Pointer(e.Native()))
 }
 
 func (e *Element) AsElement() *Element {
@@ -127,42 +128,86 @@ func (e *Element) AddPad(p *Pad) bool {
 	return C.gst_element_add_pad(e.g(), p.g()) != 0
 }
 
-func (e *Element) GetPad(name string) *Pad {
-	s := (*C.gchar)(C.CString(name))
-	defer C.free(unsafe.Pointer(s))
-	cp := C.gst_element_get_static_pad(e.g(), s)
-	if cp == nil {
-		return nil
+func (e *Element) GetPad(name string) (*Pad, error) {
+	cstr := C.CString(name)
+	defer C.free(unsafe.Pointer(cstr))
+	c := C.gst_element_get_static_pad(e.g(), ((*C.gchar)(cstr)))
+	if c == nil {
+		return nil, nilPtrErr
 	}
-	p := new(Pad)
-	p.SetPtr(glib.Pointer(cp))
-	return p
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	l := wrapPad(obj)
+	obj.RefSink()
+	runtime.SetFinalizer(obj, (*glib.Object).Unref)
+	return l, nil
+
+	////////////////////////////////////////////*
+	/*
+		s := (*C.gchar)(C.CString(name))
+		defer C.free(unsafe.Pointer(s))
+		cp := C.gst_element_get_static_pad(e.g(), s)
+		if cp == nil {
+			return nil
+		}
+		p := new(Pad)
+		p.SetPtr(glib.Pointer(cp))
+		return p
+	*/
 }
 
-func (e *Element) GetStaticPad(name string) *Pad {
-	s := (*C.gchar)(C.CString(name))
-	defer C.free(unsafe.Pointer(s))
-	cp := C.gst_element_get_static_pad(e.g(), s)
-	if cp == nil {
-		return nil
+func (e *Element) GetStaticPad(name string) (*Pad, error) {
+	cstr := C.CString(name)
+	defer C.free(unsafe.Pointer(cstr))
+	c := C.gst_element_get_static_pad(e.g(), ((*C.gchar)(cstr)))
+	if c == nil {
+		return nil, nilPtrErr
 	}
-	p := new(Pad)
-	p.SetPtr(glib.Pointer(cp))
-	return p
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	l := wrapPad(obj)
+	obj.RefSink()
+	runtime.SetFinalizer(obj, (*glib.Object).Unref)
+	return l, nil
+	/*
+		s := (*C.gchar)(C.CString(name))
+		defer C.free(unsafe.Pointer(s))
+		cp := C.gst_element_get_static_pad(e.g(), s)
+		if cp == nil {
+			return nil
+		}
+		p := new(Pad)
+		p.SetPtr(glib.Pointer(cp))
+		return p
+	*/
 }
 
 func (e *Element) GetBus() *Bus {
-	bus := C.gst_element_get_bus(e.g())
-	if bus == nil {
+	c := C.gst_element_get_bus(e.g())
+	if c == nil {
 		return nil
 	}
-	b := new(Bus)
-	b.SetPtr(glib.Pointer(bus))
-	return b
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	l := wrapBus(obj)
+	obj.RefSink()
+	runtime.SetFinalizer(obj, (*glib.Object).Unref)
+	return l
+	/*
+
+		bus := C.gst_element_get_bus(e.g())
+		if bus == nil {
+			return nil
+		}
+		b := new(Bus)
+		b.SetPtr(glib.Pointer(bus))
+		return b
+	*/
 }
 
 func (e *Element) QueryPosition(format Format, cur *time.Duration) bool {
 	return C.gst_element_query_position(e.g(), (C.GstFormat)(format), (*C.gint64)(cur)) != 0
+}
+
+func wrapElement(obj *glib.Object) *Element {
+	return &Element{*wrapGstObj(obj)}
 }
 
 // TODO: Move ElementFactoryMake to element_factory.go
@@ -171,11 +216,12 @@ func ElementFactoryMake(factory_name, name string) *Element {
 	defer C.free(unsafe.Pointer(fn))
 	n := (*C.gchar)(C.CString(name))
 	defer C.free(unsafe.Pointer(n))
-	e := new(Element)
-	e.SetPtr(glib.Pointer(C.gst_element_factory_make(fn, n)))
-	return e
+	c := C.gst_element_factory_make(fn, n)
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	return wrapElement(obj)
 }
 
+/*
 func ParseLaunch(pipeline_description string) (*Element, error) {
 	pd := (*C.gchar)(C.CString(pipeline_description))
 	defer C.free(unsafe.Pointer(pd))
@@ -189,3 +235,4 @@ func ParseLaunch(pipeline_description string) (*Element, error) {
 	}
 	return e, nil
 }
+*/

@@ -7,7 +7,9 @@ package gst
 import "C"
 
 import (
-	"github.com/ziutek/glib"
+	"github.com/conformal/gotk3/glib"
+	"runtime"
+	"unsafe"
 )
 
 type Bus struct {
@@ -15,7 +17,7 @@ type Bus struct {
 }
 
 func (b *Bus) g() *C.GstBus {
-	return (*C.GstBus)(b.GetPtr())
+	return (*C.GstBus)(unsafe.Pointer(b.Native()))
 }
 
 func (b *Bus) AsBus() *Bus {
@@ -84,8 +86,18 @@ func (b *Bus) Poll(events MessageType, timeout int64) *Message {
 		C.GstClockTime(timeout)))
 }
 
-func NewBus() *Bus {
-	b := new(Bus)
-	b.SetPtr(glib.Pointer(C.gst_bus_new()))
-	return b
+func wrapBus(obj *glib.Object) *Bus {
+	return &Bus{GstObj{glib.InitiallyUnowned{obj}}}
+}
+
+func NewBus() (*Bus, error) {
+	c := C.gst_bus_new()
+	if c == nil {
+		return nil, nilPtrErr
+	}
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	l := wrapBus(obj)
+	obj.RefSink()
+	runtime.SetFinalizer(obj, (*glib.Object).Unref)
+	return l, nil
 }

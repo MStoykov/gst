@@ -7,7 +7,7 @@ package gst
 import "C"
 
 import (
-	"github.com/ziutek/glib"
+	"github.com/conformal/gotk3/glib"
 	"unsafe"
 )
 
@@ -16,7 +16,11 @@ type Pipeline struct {
 }
 
 func (p *Pipeline) g() *C.GstPipeline {
-	return (*C.GstPipeline)(p.GetPtr())
+	return (*C.GstPipeline)(unsafe.Pointer(p.Native()))
+}
+
+func wrapPipeline(obj *glib.Object) *Pipeline {
+	return &Pipeline{Bin{Element{GstObj{glib.InitiallyUnowned{obj}}}}}
 }
 
 func (p *Pipeline) AsPipeline() *Pipeline {
@@ -26,7 +30,11 @@ func (p *Pipeline) AsPipeline() *Pipeline {
 func NewPipeline(name string) *Pipeline {
 	s := (*C.gchar)(C.CString(name))
 	defer C.free(unsafe.Pointer(s))
-	p := new(Pipeline)
-	p.SetPtr(glib.Pointer(C.gst_pipeline_new(s)))
-	return p
+	c := C.gst_pipeline_new(s)
+	if c == nil {
+		return nil
+	}
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	l := wrapPipeline(obj)
+	return l
 }

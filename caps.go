@@ -11,7 +11,7 @@ int _gst_caps_refcount_value(GstCaps *caps) {
 import "C"
 
 import (
-	"github.com/ziutek/glib"
+	_ "github.com/conformal/gotk3/glib"
 	"unsafe"
 )
 
@@ -33,7 +33,7 @@ func (c *Caps) RefCount() int {
 	return int(C._gst_caps_refcount_value(c.g()))
 }
 
-func (c *Caps) AppendStructure(media_type string, fields glib.Params) {
+func (c *Caps) AppendStructure(media_type string, fields map[string]interface{}) {
 	C.gst_caps_append_structure(c.g(), makeGstStructure(media_type, fields))
 }
 
@@ -55,7 +55,7 @@ func NewCapsEmpty() *Caps {
 	return (*Caps)(C.gst_caps_new_empty())
 }
 
-func NewCapsSimple(media_type string, fields glib.Params) *Caps {
+func NewCapsSimple(media_type string, fields map[string]interface{}) *Caps {
 	c := NewCapsEmpty()
 	c.AppendStructure(media_type, fields)
 	return c

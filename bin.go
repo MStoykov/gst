@@ -7,7 +7,8 @@ package gst
 import "C"
 
 import (
-	"github.com/ziutek/glib"
+	"github.com/conformal/gotk3/glib"
+	"runtime"
 	"unsafe"
 )
 
@@ -16,19 +17,29 @@ type Bin struct {
 }
 
 func (b *Bin) g() *C.GstBin {
-	return (*C.GstBin)(b.GetPtr())
+	return (*C.GstBin)(unsafe.Pointer(b.Native()))
 }
 
 func (b *Bin) AsBin() *Bin {
 	return b
 }
 
-func NewBin(name string) *Bin {
-	s := (*C.gchar)(C.CString(name))
-	defer C.free(unsafe.Pointer(s))
-	b := new(Bin)
-	b.SetPtr(glib.Pointer(C.gst_bin_new(s)))
-	return b
+func wrapBin(obj *glib.Object) *Bin {
+	return &Bin{Element{GstObj{glib.InitiallyUnowned{obj}}}}
+}
+
+func NewBin(name string) (*Bin, error) {
+	cstr := C.CString(name)
+	defer C.free(unsafe.Pointer(cstr))
+	c := C.gst_bin_new((*C.gchar)(cstr))
+	if c == nil {
+		return nil, nilPtrErr
+	}
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	l := wrapBin(obj)
+	obj.RefSink()
+	runtime.SetFinalizer(obj, (*glib.Object).Unref)
+	return l, nil
 }
 
 func (b *Bin) Add(els ...*Element) bool {

@@ -7,7 +7,7 @@ package gst
 import "C"
 
 import (
-	"github.com/ziutek/glib"
+	"github.com/conformal/gotk3/glib"
 	"unsafe"
 )
 
@@ -71,8 +71,12 @@ type Pad struct {
 	GstObj
 }
 
+func wrapPad(obj *glib.Object) *Pad {
+	return &Pad{GstObj{glib.InitiallyUnowned{obj}}}
+}
+
 func (p *Pad) g() *C.GstPad {
-	return (*C.GstPad)(p.GetPtr())
+	return (*C.GstPad)(unsafe.Pointer(p.Native()))
 }
 
 func (p *Pad) AsPad() *Pad {
@@ -91,8 +95,12 @@ type GhostPad struct {
 	Pad
 }
 
+func wrapGhostPad(obj *glib.Object) *GhostPad {
+	return &GhostPad{Pad{GstObj{glib.InitiallyUnowned{obj}}}}
+}
+
 func (p *GhostPad) g() *C.GstGhostPad {
-	return (*C.GstGhostPad)(p.GetPtr())
+	return (*C.GstGhostPad)(unsafe.Pointer(p.Native()))
 }
 
 func (p *GhostPad) AsGhostPad() *GhostPad {
@@ -104,9 +112,12 @@ func (p *GhostPad) SetTarget(new_target *Pad) bool {
 }
 
 func (p *GhostPad) GetTarget() *Pad {
-	r := new(Pad)
-	r.SetPtr(glib.Pointer(C.gst_ghost_pad_get_target(p.g())))
-	return r
+	c := C.gst_ghost_pad_get_target(p.g())
+	if c == nil {
+		return nil
+	}
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	return wrapPad(obj)
 }
 
 func (p *GhostPad) Construct() bool {
@@ -116,15 +127,21 @@ func (p *GhostPad) Construct() bool {
 func NewGhostPad(name string, target *Pad) *GhostPad {
 	s := (*C.gchar)(C.CString(name))
 	defer C.free(unsafe.Pointer(s))
-	p := new(GhostPad)
-	p.SetPtr(glib.Pointer(C.gst_ghost_pad_new(s, target.g())))
-	return p
+	c := C.gst_ghost_pad_new(s, target.g())
+	if c == nil {
+		return nil
+	}
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	return wrapGhostPad(obj)
 }
 
 func NewGhostPadNoTarget(name string, dir PadDirection) *GhostPad {
 	s := (*C.gchar)(C.CString(name))
 	defer C.free(unsafe.Pointer(s))
-	p := new(GhostPad)
-	p.SetPtr(glib.Pointer(C.gst_ghost_pad_new_no_target(s, dir.g())))
-	return p
+	c := C.gst_ghost_pad_new_no_target(s, dir.g())
+	if c == nil {
+		return nil
+	}
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	return wrapGhostPad(obj)
 }

@@ -7,16 +7,17 @@ package gst
 import "C"
 
 import (
-	"github.com/ziutek/glib"
+	"github.com/conformal/gotk3/glib"
+	"runtime"
 	"unsafe"
 )
 
 type GstObj struct {
-	glib.Object
+	glib.InitiallyUnowned
 }
 
 func (o *GstObj) g() *C.GstObject {
-	return (*C.GstObject)(o.GetPtr())
+	return (*C.GstObject)(unsafe.Pointer(o.Native()))
 }
 
 func (o *GstObj) AsGstObj() *GstObj {
@@ -47,12 +48,22 @@ func (o *GstObj) SetParent(p *GstObj) bool {
 	return C.gst_object_set_parent(o.g(), p.g()) != 0
 }
 
+func wrapGstObj(obj *glib.Object) *GstObj {
+	return &GstObj{glib.InitiallyUnowned{obj}}
+}
+
 // Returns the parent of o. Increases the refcount of the parent object so you
 // should Unref it after usage.
-func (o *GstObj) GetParent() *GstObj {
-	p := new(GstObj)
-	p.SetPtr(glib.Pointer(C.gst_object_get_parent(o.g())))
-	return p
+func (o *GstObj) GetParent() (*GstObj, error) {
+	c := C.gst_object_get_parent(o.g())
+	if c == nil {
+		return nil, nilPtrErr
+	}
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(c))}
+	r := wrapGstObj(obj)
+	obj.RefSink()
+	runtime.SetFinalizer(obj, (*glib.Object).Unref)
+	return r, nil
 }
 
 // Clear the parent of object, removing the associated reference. This function

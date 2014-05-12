@@ -7,7 +7,8 @@ package gst
 import "C"
 
 import (
-	"github.com/ziutek/glib"
+	"errors"
+	"github.com/conformal/gotk3/glib"
 	"unsafe"
 )
 
@@ -112,9 +113,11 @@ func (m *Message) g() *C.GstMessage {
 	return (*C.GstMessage)(m)
 }
 
+/*
 func (m *Message) Type() glib.Type {
 	return glib.TypeFromName("GstMessage")
 }
+*/
 
 func (m *Message) Ref() *Message {
 	return (*Message)(C.gst_message_ref(m.g()))
@@ -128,7 +131,7 @@ func (m *Message) GetType() MessageType {
 	return MessageType(m._type)
 }
 
-func (m *Message) GetStructure() (string, glib.Params) {
+func (m *Message) GetStructure() (string, map[string]interface{}) {
 	structure := C.gst_message_get_structure(m.g())
 	if structure == nil {
 		return "", nil
@@ -137,22 +140,21 @@ func (m *Message) GetStructure() (string, glib.Params) {
 }
 
 func (m *Message) GetSrc() *GstObj {
-	src := new(GstObj)
-	src.SetPtr(glib.Pointer(m.src))
-	return src
+	obj := &glib.Object{glib.ToGObject(unsafe.Pointer(m.src))}
+	return wrapGstObj(obj)
 }
 
-func (m *Message) ParseError() (err *glib.Error, debug string) {
+func (m *Message) ParseError() (err error, debug string) {
 	var d *C.gchar
-	var e, ret_e *C.GError
+	var e *C.GError
 
 	C.gst_message_parse_error(m.g(), &e, &d)
-	defer C.free(unsafe.Pointer(e))
-	defer C.free(unsafe.Pointer(d))
+	if d != nil {
+		defer C.free(unsafe.Pointer(d))
+	}
 
 	debug = C.GoString((*C.char)(d))
-	ret_e = new(C.GError)
-	*ret_e = *e
-	err = (*glib.Error)(unsafe.Pointer(ret_e))
+	defer C.g_error_free(e)
+	err = errors.New(C.GoString((*C.char)(C.gst_error_get_message(e.domain, e.code))))
 	return
 }
